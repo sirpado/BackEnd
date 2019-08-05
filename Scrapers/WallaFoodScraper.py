@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from urllib.request import urlopen
-from Scrapers import AWebScraper
+from Scrapers.AWebScraper import AWebScraper
 from bs4 import BeautifulSoup
 import requests
 import hashlib
@@ -36,7 +36,6 @@ class WallaFoodScraper(AWebScraper):
             next = soup.find_all('a', attrs = {'rel': 'next'})[0]['href']
             self.getLinks(next,recipe_links,counter + 1)
 
-
     def find_ingredients(self,link_dict,queue):
         for link in link_dict:
             result_array = []
@@ -50,7 +49,6 @@ class WallaFoodScraper(AWebScraper):
             except TimeoutError:
                 continue
 
-
     # Override method from abstract class
     def scrape(self,searchWords,queue):
         search_url = super(WallaFoodScraper,self).getSearchUrl(searchWords)
@@ -60,7 +58,6 @@ class WallaFoodScraper(AWebScraper):
         except ValueError as error:
             print(error.args)
             return None
-
 
     def __init__(self,name,url,visited,lock):
         self.url = url

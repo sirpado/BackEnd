@@ -8,6 +8,7 @@ import itertools
 walla_food_link = 'https://food.walla.co.il/recipes?page=1&q='
 nikiB_link = 'https://nikib.co.il/search-results/?_sft_ingredients='
 
+# DOR: I think we should remove the below block before the test.
 #################################for DEBUG use only#########################################
 # def getInput():
 #     search_words = []
@@ -19,7 +20,8 @@ nikiB_link = 'https://nikib.co.il/search-results/?_sft_ingredients='
 #             search_words.append(search_input)
 #############################################################################################
 
-def  rankRecipes(values,searchWords,urgentProducts):
+
+def rankRecipes(values, search_words, urgent_products):
     recipearray = []
     number_of_matching_ingredients = 0
     number_of_urgent_products = 0
@@ -27,24 +29,29 @@ def  rankRecipes(values,searchWords,urgentProducts):
     for recipe in values:
         ingredients = recipe[2]
         for word in ingredients:
-            for searchWord in searchWords:
-                if str(word).__contains__(searchWord):
+            for search_word in search_words:
+                if search_word in word:
                     number_of_matching_ingredients = number_of_matching_ingredients + 1
-            for urgentProduct in urgentProducts:
-                if str(word).__contains__(urgentProduct):
+            for urgent_product in urgent_products:
+                if urgent_product in word:
                     number_of_urgent_products = number_of_matching_ingredients + 1
-        score = float(number_of_matching_ingredients/len(searchWords))+float(number_of_urgent_products*2/len(urgentProduct))
-        if score < 10.0 :
+        # DOR: Changed len(urgent_product) to len(urgent_products) - I think you meant the urgent products recieved , right?
+        #       Also, adding a test that the length is > than 0 so there won't be a division by 0.
+        if len(urgent_products) > 0:
+            score = float(number_of_matching_ingredients / len(search_words)) + float(number_of_urgent_products * 2 /
+                                                                                      len(urgent_products))
+        else:
+            score = float(number_of_matching_ingredients / len(search_words))
+        if score < 10.0:
             score = score + number_of_urgent_products
         if score > 10.0:
             score = 10.0
-
         score = float("{0:.2f}".format(score))
         recipearray.append({"name":recipe[0], "link":recipe[1], "score": score})
     return recipearray
 
 
-def scrape(searchWords,urgentProducts,cond,recipesQueue):
+def scrape(search_words, urgent_products, cond, recipes_queue):
     queues = []
     threads = []
     values = []
@@ -57,22 +64,22 @@ def scrape(searchWords,urgentProducts,cond,recipesQueue):
 
     lock = threading.Lock()
 
-    wallaScrapper = WallaFoodScraper('WallaFood', walla_food_link, visited, lock)
-    nikibScraper = NikiBScraper('NikiB', nikiB_link, visited, lock)
+    walla_scraper = WallaFoodScraper('WallaFood', walla_food_link, visited, lock)
+    nikib_scraper = NikiBScraper('NikiB', nikiB_link, visited, lock)
 
     # split all the search words in to combinations in the length of 3 to get more recipes
-    if (len(searchWords) > 3):
-        possible_combinations = itertools.combinations(searchWords, 3)
+    if len(search_words) > 3:
+        possible_combinations = itertools.combinations(search_words, 3)
         for combination in possible_combinations:
-            searchWords = []
+            search_words = []
             for word in combination:
-                searchWords.append(word)
-            threads.append(threading.Thread(target=wallaScrapper.scrape, args=(searchWords, nikibq, cond, recipesQueue)))
-            threads.append(threading.Thread(target=nikibScraper.scrape, args=(searchWords, nikibq, cond, recipesQueue)))
+                search_words.append(word)
+            threads.append(threading.Thread(target=walla_scraper.scrape, args=(search_words, nikibq, cond, recipes_queue)))
+            threads.append(threading.Thread(target=nikib_scraper.scrape, args=(search_words, nikibq, cond, recipes_queue)))
 
     else:
-        threads.append(threading.Thread(target=nikibScraper.scrape, args=(searchWords, nikibq, cond, recipesQueue)))
-        threads.append(threading.Thread(target=wallaScrapper.scrape, args=(searchWords, wallaq, cond, recipesQueue)))
+        threads.append(threading.Thread(target=nikib_scraper.scrape, args=(search_words, nikibq, cond, recipes_queue)))
+        threads.append(threading.Thread(target=walla_scraper.scrape, args=(search_words, wallaq, cond, recipes_queue)))
 
     for thread in threads:
         try:
@@ -89,7 +96,7 @@ def scrape(searchWords,urgentProducts,cond,recipesQueue):
             while queue.empty() is False:
                 values.append(queue.get())
 
-    ranked_recipes = rankRecipes(values,searchWords,urgentProducts)
+    ranked_recipes = rankRecipes(values, search_words, urgent_products)
     return  ranked_recipes
 
 
