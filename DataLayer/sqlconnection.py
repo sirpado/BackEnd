@@ -1,27 +1,29 @@
 # -*- coding: utf-8 -*-
+import logging
+
 import requests
 import pyodbc
 import json
 import re
 
-global connectionString
-connectionString= ('Driver={SQL Server};'
-                      'Server=OMER\SQLEXPRESS;'
-                      'Database=OcD;'
-                      'Trusted_Connection=yes;')
-
+connectionString = (r'Driver={SQL Server};'
+                    r'Server=DESKTOP-G22L933\SQLEXPRESS;'
+                    r'Database=OcD;'
+                    r'Trusted_Connection=yes;')
+log = logging.getLogger("server")
+logging.basicConfig(level=logging.DEBUG)
 
 def getNumberOfMatchingNames(names):
     result = list()
     conn = pyodbc.connect(connectionString)
     cursor = conn.cursor()
-    sql ='''SELECT DISTINCT prodName FROM oCd.dbo.PRODUCTS'''
+    sql = '''SELECT DISTINCT prodName FROM oCd.dbo.PRODUCTS'''
     cursor.execute(sql)
 
     for row in cursor:
         result.append(row[0])
 
-    return len(set(names)&set(result))
+    return len(set(names) & set(result))
 
 
 def getAllProducts():
@@ -36,23 +38,23 @@ def getProductByName(name):
     conn = pyodbc.connect(connectionString)
     cursor = conn.cursor()
     sql = '''SELECT * FROM oCd.dbo.PRODUCTS WHERE  prodName LIKE (?)'''
-    cursor.execute(sql,'%'+name+'%')
+    cursor.execute(sql, '%' + name + '%')
     if cursor.rowcount is 0:
         return None
-    return  cursor
+    return cursor
 
 
 def getProductByBarcode(barcode):
     conn = pyodbc.connect(connectionString)
     cursor = conn.cursor()
     sql = '''SELECT * FROM oCd.dbo.PRODUCTS WHERE  barcode = (?)'''
-    cursor.execute(sql,barcode)
+    cursor.execute(sql, barcode)
     if cursor.rowcount is 0:
         return None
     return cursor
 
 
-def insertProduct(barcode,name,quantity):
+def insertProduct(barcode, name, quantity):
     conn = pyodbc.connect(connectionString)
 
     cursor = conn.cursor()
@@ -61,19 +63,21 @@ def insertProduct(barcode,name,quantity):
                     VALUES
                     (?,?,?)'''
 
-    params = (barcode,name,quantity)
-    cursor.execute(sql,params)
+    params = (barcode, name, quantity)
+    cursor.execute(sql, params)
     conn.commit()
 
 
 def getNameFromAPI(barcode):
-    data = {"api_key": "d7a7986c35e4c4a3b64b96f2accb0ace2ce5f7a1", "action": "GetProductsByBarCode", "product_barcode": barcode}
-    a = requests.post('https://api.superget.co.il/', data)
-    b = json.loads(a.text)
+    headers = {"api_key": "d7a7986c35e4c4a3b64b96f2accb0ace2ce5f7a1", "action": "GetProductsByBarCode",
+            "product_barcode": barcode}
+    response = requests.post('https://api.superget.co.il/', headers)
+    response_text = json.loads(response.text)
     try:
-        name = b[0]["product_name"]
+        name = response_text[0]["product_name"]
         return name
-    except :
+    except KeyError as exc:
+        log.error("Exception occured :  {} ".format(exc))
         return None
 
 
@@ -82,7 +86,7 @@ def getNameFromDB(barcode):
     conn = pyodbc.connect(connectionString)
     cursor = conn.cursor()
     sql = '''SELECT prodname FROM oCd.dbo.PRODUCTS WHERE  barcode = (?)'''
-    cursor.execute(sql,barcode)
+    cursor.execute(sql, barcode)
     if cursor.rowcount is 0:
         return None
     for row in cursor:
@@ -92,28 +96,27 @@ def getNameFromDB(barcode):
 
 def parseName(name):
     prodName = ''
-    quantity = 0
     details = re.split(r'(\d+)', name)
-    if len (details) > 3:
-        if '*' in details:      #deal packeges
+    if len(details) > 3:
+        if '*' in details:  # deal packeges
             index = details.index('*')
-            for val in range (index-1):
-                prodName = prodName + details[val]+' '
-            quantity = float(details[index -1]) * float(details [index + 1])
+            for val in range(index - 1):
+                prodName = prodName + details[val] + ' '
+            quantity = float(details[index - 1]) * float(details[index + 1])
 
-        else:                   #fat precents
+        else:  # fat precents
             prodName = details[0]
             quantity = float(details[3])
 
-    elif len (details) == 3:    #name + weight + massurement
+    elif len(details) == 3:  # name + weight + massurement
         prodName = details[0]
-        prodName = prodName.replace('-','')
+        prodName = prodName.replace('-', '')
         quantity = float(details[1])
 
-    else:                       #just name
+    else:  # just name
         prodName = name
         quantity = 1.0
-    return prodName,quantity
+    return prodName, quantity
 
 
 def scanBarcode(barcode):
@@ -122,7 +125,7 @@ def scanBarcode(barcode):
         prodName = getNameFromAPI(barcode)
         if prodName is not None:
             details = parseName(prodName)
-            insertProduct(barcode,details[0],int(details[1]))
+            insertProduct(barcode, details[0], int(details[1]))
             prodName = details[0]
     if prodName is not None:
         return prodName

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from urllib.request import urlopen
-from Scrapers import AWebScraper
+from Scrapers.AWebScraper import AWebScraper
 from bs4 import BeautifulSoup
 import requests
 import hashlib
@@ -13,19 +13,22 @@ class WallaFoodScraper(AWebScraper):
 
     #Scrape recepies links from search page
     def getLinks(self,search_result, recipe_links,counter):
-        url_beginning = 'http://food.walla.co.il'
-        search_result_page = urlopen(search_result)
-        soup = BeautifulSoup(search_result_page, 'html.parser')
-        results = soup.find_all('a',
+        try:
+            url_beginning = 'http://food.walla.co.il'
+            search_result_page = urlopen(search_result)
+            soup = BeautifulSoup(search_result_page, 'html.parser')
+            results = soup.find_all('a',
                                 attrs={'href': re.compile("recipe/[0-9]*"), 'class': 'event'})
-        for result in results:
-            encoded_link = result.text.encode('utf-8')
-            hashed_link = hashlib.sha1(encoded_link)
-            self.lock.acquire()
-            if len(result.parent.parent.attrs['class']) > 1 and hashed_link not in self.visited:
-                recipe_links[url_beginning + result.attrs['href']] = result.text
-                self.visited.append(hashed_link)
-            self.lock.release()
+            for result in results:
+                encoded_link = result.text.encode('utf-8')
+                hashed_link = hashlib.sha1(encoded_link)
+                self.lock.acquire()
+                if len(result.parent.parent.attrs['class']) > 1 and hashed_link not in self.visited:
+                    recipe_links[url_beginning + result.attrs['href']] = result.text
+                    self.visited.append(hashed_link)
+                self.lock.release()
+        except Exception:
+            pass
 
         #No results
         if len(recipe_links) == 0:
@@ -35,7 +38,6 @@ class WallaFoodScraper(AWebScraper):
         if len(soup.find_all('a', attrs = {'rel': 'next'}) ) > 0 and counter < PAGE_NUMBER_LIMIT:
             next = soup.find_all('a', attrs = {'rel': 'next'})[0]['href']
             self.getLinks(next,recipe_links,counter + 1)
-
 
     def find_ingredients(self,link_dict,queue):
         for link in link_dict:
@@ -50,7 +52,6 @@ class WallaFoodScraper(AWebScraper):
             except TimeoutError:
                 continue
 
-
     # Override method from abstract class
     def scrape(self,searchWords,queue):
         search_url = super(WallaFoodScraper,self).getSearchUrl(searchWords)
@@ -60,7 +61,6 @@ class WallaFoodScraper(AWebScraper):
         except ValueError as error:
             print(error.args)
             return None
-
 
     def __init__(self,name,url,visited,lock):
         self.url = url
