@@ -96,7 +96,6 @@ def getNameFromDB(barcode):
 
 def parseName(name):
     prodName = ''
-    quantity = 0 # DOR : unused -  can remove
     details = re.split(r'(\d+)', name)
     if len(details) > 3:
         if '*' in details:  # deal packeges

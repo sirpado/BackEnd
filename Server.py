@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import DataLayer.sqlconnection as sqlconnection
 from Scrapers import mainScraper
 import multiprocessing
@@ -21,7 +22,6 @@ class Server(object):
         while True:
             conn, address = self.socket.accept()
             self.logger.debug("Got connection")
-            # DOR: maybe change the process name here so there wouldn't be a conflict ?
             process = multiprocessing.Process(target=handle, args=(conn, address))
             process.daemon = True
             process.start()
@@ -52,7 +52,6 @@ def handle(connection, address):
             elif command == 'search':
                 searchWords = recived_json["ingredients"].split(",")
                 urgentProducts = recived_json["urgent"].split(",")
-                # DOR: seems to be some missing arguments in the call to scrape:
                 recipes = mainScraper.scrape(searchWords,urgentProducts)
                 json_array = []
                 for recipe in recipes:
@@ -60,14 +59,8 @@ def handle(connection, address):
                     logger.debug("Sending Recipe %r",recipe)
                 send_response_json = {"result": "recipes", "items": json_array}
                 connection.sendall(json.dumps(send_response_json,ensure_ascii= False).encode('utf-8'))
-                # DOR: Can we remove these commented lines?
-
-                #done = {"":"done"}
-                #logger.debug(("Sending Done command"))
-                #connection.sendall(json.dumps(done).encode())
             logger.debug("Sent data")
 
-    # DOR : added print of exception so we know what is the exception that got thrown
     except Exception as exc:
         logging.exception("Unexpected exception: {} ".format(exc))
     finally:
@@ -82,7 +75,6 @@ if __name__ == "__main__":
     try:
         logging.info("Listening on port {} ".format(server.port))
         server.start()
-    # DOR : added print of exception so we know what is the exception that got thrown
     except Exception as exc:
         logging.exception("Unexpected exception: {} ".format(exc))
     finally:

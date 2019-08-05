@@ -8,18 +8,6 @@ import itertools
 walla_food_link = 'https://food.walla.co.il/recipes?page=1&q='
 nikiB_link = 'https://nikib.co.il/search-results/?_sft_ingredients='
 
-# DOR: I think we should remove the below block before the test.
-#################################for DEBUG use only#########################################
-# def getInput():
-#     search_words = []
-#     while True:
-#         search_input = input("אנא הקלד פריטים אותם תרצה לחפש לסיום הקלד חפש" + '\n')
-#         if search_input == 'חפש':
-#             return search_words
-#         else:
-#             search_words.append(search_input)
-#############################################################################################
-
 
 def rankRecipes(values, search_words, urgent_products):
     recipearray = []
@@ -35,15 +23,13 @@ def rankRecipes(values, search_words, urgent_products):
             for urgent_product in urgent_products:
                 if urgent_product in word:
                     number_of_urgent_products = number_of_matching_ingredients + 1
-        # DOR: Changed len(urgent_product) to len(urgent_products) - I think you meant the urgent products recieved , right?
-        #       Also, adding a test that the length is > than 0 so there won't be a division by 0.
+
         if len(urgent_products) > 0:
             score = float(number_of_matching_ingredients / len(search_words)) + float(number_of_urgent_products * 2 /
                                                                                       len(urgent_products))
         else:
             score = float(number_of_matching_ingredients / len(search_words))
-        if score < 10.0:
-            score = score + number_of_urgent_products
+
         if score > 10.0:
             score = 10.0
         score = float("{0:.2f}".format(score))
@@ -51,7 +37,7 @@ def rankRecipes(values, search_words, urgent_products):
     return recipearray
 
 
-def scrape(search_words, urgent_products, cond, recipes_queue):
+def scrape(search_words, urgent_products):
     queues = []
     threads = []
     values = []
@@ -74,12 +60,12 @@ def scrape(search_words, urgent_products, cond, recipes_queue):
             search_words = []
             for word in combination:
                 search_words.append(word)
-            threads.append(threading.Thread(target=walla_scraper.scrape, args=(search_words, nikibq, cond, recipes_queue)))
-            threads.append(threading.Thread(target=nikib_scraper.scrape, args=(search_words, nikibq, cond, recipes_queue)))
+            threads.append(threading.Thread(target=walla_scraper.scrape, args=(search_words, nikibq)))
+            threads.append(threading.Thread(target=nikib_scraper.scrape, args=(search_words, nikibq)))
 
     else:
-        threads.append(threading.Thread(target=nikib_scraper.scrape, args=(search_words, nikibq, cond, recipes_queue)))
-        threads.append(threading.Thread(target=walla_scraper.scrape, args=(search_words, wallaq, cond, recipes_queue)))
+        threads.append(threading.Thread(target=nikib_scraper.scrape, args=(search_words, nikibq)))
+        threads.append(threading.Thread(target=walla_scraper.scrape, args=(search_words, wallaq)))
 
     for thread in threads:
         try:
@@ -99,8 +85,16 @@ def scrape(search_words, urgent_products, cond, recipes_queue):
     ranked_recipes = rankRecipes(values, search_words, urgent_products)
     return  ranked_recipes
 
-
-###############################for DEBUG use only##########################################
+#################################for DEBUG use only#########################################
+# def getInput():
+#     search_words = []
+#     while True:
+#         search_input = input("אנא הקלד פריטים אותם תרצה לחפש לסיום הקלד חפש" + '\n')
+#         if search_input == 'חפש':
+#             return search_words
+#         else:
+#             search_words.append(search_input)
+#
 # if __name__ == '__main__':
 #     queues = []
 #     threads = []
@@ -124,12 +118,8 @@ def scrape(search_words, urgent_products, cond, recipes_queue):
 #             searchWords = []
 #             for word in combination:
 #                 searchWords.append(word)
-#             threads.append(threading.Thread(target=wallaScrapper.scrape, args=(searchWords, nikibq)))
-#             threads.append(threading.Thread(target= nikibScraper.scrape,args=(searchWords,nikibq)))
 #
-#     else:
-#         threads.append(threading.Thread(target= nikibScraper.scrape,args=(searchWords,nikibq)))
-#         threads.append(threading.Thread(target = wallaScrapper.scrape, args=(searchWords,wallaq)))
+#     scrape(searchWords,[])
 #
 #     for thread in threads:
 #         try:
@@ -140,4 +130,4 @@ def scrape(search_words, urgent_products, cond, recipes_queue):
 #
 #     for queue in queues:
 #         print (queue.qsize())
-##############################################################################################################
+

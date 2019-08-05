@@ -13,19 +13,22 @@ class WallaFoodScraper(AWebScraper):
 
     #Scrape recepies links from search page
     def getLinks(self,search_result, recipe_links,counter):
-        url_beginning = 'http://food.walla.co.il'
-        search_result_page = urlopen(search_result)
-        soup = BeautifulSoup(search_result_page, 'html.parser')
-        results = soup.find_all('a',
+        try:
+            url_beginning = 'http://food.walla.co.il'
+            search_result_page = urlopen(search_result)
+            soup = BeautifulSoup(search_result_page, 'html.parser')
+            results = soup.find_all('a',
                                 attrs={'href': re.compile("recipe/[0-9]*"), 'class': 'event'})
-        for result in results:
-            encoded_link = result.text.encode('utf-8')
-            hashed_link = hashlib.sha1(encoded_link)
-            self.lock.acquire()
-            if len(result.parent.parent.attrs['class']) > 1 and hashed_link not in self.visited:
-                recipe_links[url_beginning + result.attrs['href']] = result.text
-                self.visited.append(hashed_link)
-            self.lock.release()
+            for result in results:
+                encoded_link = result.text.encode('utf-8')
+                hashed_link = hashlib.sha1(encoded_link)
+                self.lock.acquire()
+                if len(result.parent.parent.attrs['class']) > 1 and hashed_link not in self.visited:
+                    recipe_links[url_beginning + result.attrs['href']] = result.text
+                    self.visited.append(hashed_link)
+                self.lock.release()
+        except Exception:
+            pass
 
         #No results
         if len(recipe_links) == 0:
